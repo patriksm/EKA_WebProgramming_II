@@ -6,10 +6,17 @@
     <title>My First Chat</title>
 </head>
 <body>
-	<?php 		
+	<?php 
+		session_start();
+		
+		if(isset($_GET['logout'])){
+			session_destroy();
+			header("Location: index.php");
+		}
+		
 		if(isset($_POST['enter'])){
 			if($_POST['name'] != ""){
-				$a = $_POST['name'];
+				$_SESSION['name'] = $_POST['name'];
 			} else {
 				echo '<span class="error">Please type in your name!</span>';
 			}
@@ -30,13 +37,16 @@
 	?>
 	
 	<?php 
-		if(!isset($a)){
+		if(!isset($_SESSION['name'])){
 			loginForm();
 		}
 	?>
 	
 	<div id="main">
-		<div id="menu">Welcome, <?php echo $a; ?>!</div>
+		<div id="menu">
+			<p>Welcome, <?php echo $_SESSION['name']; ?>!</p>
+			<p class="logout"><a id="exit" href="#">E X I T</a></p>
+		</div>
 		<div id="chatbox">
 			<?php echo $_POST['text']; ?>
 		</div>
