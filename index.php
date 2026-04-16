@@ -39,7 +39,7 @@
 	<?php 
 		if(!isset($_SESSION['name'])){
 			loginForm();
-		}
+		} else {
 	?>
 	
 	<div id="main">
@@ -55,6 +55,10 @@
 			<input type="submit" name="submitmsg" id="submitmsg" value="S E N D">
 		</form>
 	</div>
+	
+	<?php 
+	}
+	?>
 	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 	<script type="text/javascript" src="script.js">	
 	</script>
