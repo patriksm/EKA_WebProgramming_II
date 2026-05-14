@@ -1,8 +1,10 @@
 $(document).ready(function () {
     $("#submitmsg").click(function () {
         var clientmsg = $("#usermsg").val();
-        $.post("post.php", { text: clientmsg });
-        $("#usermsg").val("");
+        if(clientmsg != ""){
+            $.post("post.php", { text: clientmsg });
+            $("#usermsg").val("");
+        }
         return false;
     });
 

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PHP WebSocket Chat</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
+    #log  { height: 300px; overflow-y: auto; border: 1px solid #ccc;
+            border-radius: 8px; padding: 12px; background: #f9f9f9; margin-bottom: 12px; }
+    .msg  { margin-bottom: 6px; }
+    .mine { color: #1a6cf0; font-weight: 500; }
+    .theirs { color: #222; }
+    .sys  { color: #888; font-style: italic; font-size: 13px; }
+    #controls { display: flex; gap: 8px; }
+    #nameBox, #msgBox { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; }
+    #nameBox { width: 120px; }
+    #msgBox  { flex: 1; }
+    button   { padding: 8px 16px; background: #1a6cf0; color: #fff;
+               border: none; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #1558c9; }
+    #status { font-size: 13px; color: #888; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <h2>💬 PHP WebSocket Chat</h2>
+  <div id="status">Connecting...</div>
+  <div id="log"></div>
+
+  <div id="controls">
+    <input id="nameBox" type="text" placeholder="Your name" value="Student">
+    <input id="msgBox"  type="text" placeholder="Type a message...">
+    <button onclick="sendMsg()">Send</button>
+  </div>
+
+  <script>
+    // 1. Create the WebSocket connection to our PHP server
+    const ws = new WebSocket('ws://127.0.0.1:8080');
+
+    const log    = document.getElementById('log');
+    const status = document.getElementById('status');
+
+    // Helper: append a message line to the chat log
+    function addLine(text, cssClass) {
+      const div = document.createElement('div');
+      div.className = 'msg ' + cssClass;
+      div.textContent = text;
+      log.appendChild(div);
+      // Auto-scroll to the newest message
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // 2. Connection opened — the handshake succeeded
+    ws.onopen = () => {
+      status.textContent = '✅ Connected';
+      status.style.color = '#1a8f3c';
+      addLine('Connected to chat server.', 'sys');
+    };
+
+    // 3. Message received from the server
+    ws.onmessage = (event) => {
+      addLine(event.data, 'theirs');
+    };
+
+    // 4. Connection closed
+    ws.onclose = () => {
+      status.textContent = '❌ Disconnected';
+      status.style.color = '#c0392b';
+      addLine('Disconnected from server.', 'sys');
+    };
+
+    // 5. Send a message when the user clicks Send (or presses Enter)
+    function sendMsg() {
+      const name = document.getElementById('nameBox').value.trim() || 'Anonymous';
+      const text = document.getElementById('msgBox').value.trim();
+      if (!text) return;
+
+      // Prepend the username — the server will broadcast exactly this string
+      const full = name + ': ' + text;
+      ws.send(full);
+
+      // Show own message locally (the server does NOT echo it back)
+      addLine(full, 'mine');
+
+      // Clear the input box
+      document.getElementById('msgBox').value = '';
+    }
+
+    // Allow pressing Enter to send
+    document.getElementById('msgBox')
+      .addEventListener('keydown', e => { if (e.key === 'Enter') sendMsg(); });
+  </script>
+</body>
+</html>

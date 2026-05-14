@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PHP WebSocket Chat — Tutorial</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0f11;
+    --surface: #16181c;
+    --surface2: #1e2127;
+    --border: #2a2d35;
+    --accent: #4ade80;
+    --accent2: #22d3ee;
+    --accent3: #f472b6;
+    --text: #e4e7ed;
+    --muted: #7a8094;
+    --code-bg: #0a0c0e;
+    --step-num: #2a2d35;
+    --mono: 'JetBrains Mono', monospace;
+    --serif: 'Fraunces', serif;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 300;
+    line-height: 1.75;
+    font-size: 15px;
+  }
+
+  /* ── HEADER ── */
+  .hero {
+    background: linear-gradient(160deg, #0e0f11 0%, #111519 60%, #0a1410 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 64px 40px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(74,222,128,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-inner { max-width: 820px; margin: 0 auto; }
+  .hero-tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    border: 1px solid rgba(74,222,128,0.25);
+    border-radius: 4px;
+    padding: 3px 10px;
+    margin-bottom: 20px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: clamp(28px, 5vw, 48px);
+    font-weight: 600;
+    line-height: 1.2;
+    color: #fff;
+    margin-bottom: 16px;
+  }
+  .hero h1 em { font-style: italic; color: var(--accent); }
+  .hero p {
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 560px;
+    line-height: 1.8;
+  }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px 28px;
+    max-width: 820px;
+    margin: 36px auto;
+  }
+  .toc-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 14px;
+  }
+  .toc ol { padding-left: 18px; }
+  .toc li { margin-bottom: 6px; }
+  .toc a { color: var(--accent2); text-decoration: none; font-size: 14px; }
+  .toc a:hover { text-decoration: underline; }
+
+  /* ── MAIN ── */
+  .content { max-width: 820px; margin: 0 auto; padding: 0 40px 80px; }
+
+  /* ── STEP ── */
+  .step {
+    margin-bottom: 56px;
+    padding-top: 24px;
+  }
+  .step-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .step-num {
+    flex-shrink: 0;
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 4px;
+  }
+  .step h2 {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1.3;
+    flex: 1;
+  }
+  .step h2 span {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+
+  /* ── EXPLANATION BOX ── */
+  .explain {
+    background: var(--surface);
+    border-left: 3px solid var(--accent2);
+    border-radius: 0 8px 8px 0;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: #c4c9d9;
+    line-height: 1.8;
+  }
+  .explain strong { color: var(--text); font-weight: 500; }
+
+  /* ── WARNING / NOTE BOXES ── */
+  .note {
+    background: rgba(34,211,238,0.05);
+    border: 1px solid rgba(34,211,238,0.15);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    color: #a8d8e8;
+  }
+  .note::before { content: '💡 '; }
+  .warn {
+    background: rgba(251,191,36,0.05);
+    border: 1px solid rgba(251,191,36,0.15);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    color: #d9c077;
+  }
+  .warn::before { content: '⚠️ '; }
+
+  /* ── CODE BLOCK ── */
+  .code-wrap {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 20px 0;
+  }
+  .code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface2);
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .code-lang {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .code-file {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(74,222,128,0.08);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  pre {
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.7;
+    padding: 20px 24px;
+    overflow-x: auto;
+    color: #cdd6f4;
+  }
+
+  /* ── SYNTAX HIGHLIGHTING (manual classes) ── */
+  .kw { color: #cba6f7; }   /* keyword: function, class, if, etc. */
+  .fn { color: #89b4fa; }   /* function name */
+  .str { color: #a6e3a1; }  /* string */
+  .cm { color: #585b70; font-style: italic; }  /* comment */
+  .num { color: #fab387; }  /* number */
+  .var { color: #f38ba8; }  /* variable */
+  .cls { color: #f9e2af; }  /* class/type */
+  .op { color: #89dceb; }   /* operator / punctuation */
+  .pl { color: #e2b8e4; }   /* php opening tag */
+
+  /* ── DIAGRAM ── */
+  .diagram-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin: 20px 0;
+    text-align: center;
+  }
+
+  /* ── FILE TREE ── */
+  .filetree {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 2;
+    margin: 20px 0;
+  }
+  .ft-dir { color: var(--accent2); }
+  .ft-file { color: var(--text); }
+  .ft-note { color: var(--muted); font-size: 11px; margin-left: 8px; }
+
+  /* ── FOOTER ── */
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 40px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    font-family: var(--mono);
+    max-width: 820px;
+    margin: 0 auto;
+  }
+
+  hr.step-rule {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 56px 0 0;
+  }
+
+  p { margin-bottom: 12px; }
+  ul, ol { padding-left: 20px; margin-bottom: 12px; }
+  li { margin-bottom: 4px; }
+
+  @media (max-width: 600px) {
+    .hero { padding: 40px 20px 32px; }
+    .content { padding: 0 20px 60px; }
+    .toc { margin: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-tag">Step-by-step tutorial</div>
+    <h1>Building a <em>real-time chat</em><br>with PHP WebSockets</h1>
+    <p>Learn how WebSockets work under the hood by building a multi-user chat server from scratch — no libraries, just raw PHP sockets and a bit of browser JavaScript.</p>
+  </div>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<div class="content">
+<div class="toc" style="margin-left:0;margin-right:0;">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#s1">What is a WebSocket? (Concept)</a></li>
+    <li><a href="#s2">How the WebSocket Handshake Works</a></li>
+    <li><a href="#s3">Project Setup & File Structure</a></li>
+    <li><a href="#s4">Step 1 — Create the PHP WebSocket Server</a></li>
+    <li><a href="#s5">Step 2 — Implement the Handshake</a></li>
+    <li><a href="#s6">Step 3 — Frame Encoding &amp; Decoding</a></li>
+    <li><a href="#s7">Step 4 — Handle Messages &amp; Broadcasting</a></li>
+    <li><a href="#s8">Step 5 — Build the HTML Chat Client</a></li>
+    <li><a href="#s9">Step 6 — Run &amp; Test Your Chat</a></li>
+    <li><a href="#s10">How It All Fits Together</a></li>
+  </ol>
+</div>
+
+<!-- STEP 0 — CONCEPT -->
+<div class="step" id="s1">
+  <div class="step-header">
+    <div class="step-num">★</div>
+    <h2><span>Background Concept</span>What is a WebSocket?</h2>
+  </div>
+  <div class="explain">
+    Normally, a browser asks a server for something and the server replies — then the connection closes. This is called <strong>HTTP request/response</strong>. For a chat app this is useless: we'd have to ask the server every second "any new messages?" — very wasteful.
+
+    <br><br>A <strong>WebSocket</strong> is a different protocol that starts as HTTP, then <em>upgrades</em> to a persistent two-way channel. Once open, both the browser and server can send messages to each other at any time with very little overhead. Perfect for chat, games, live dashboards, etc.
+  </div>
+
+  <!-- Architecture diagram -->
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 700 180" xmlns="http://www.w3.org/2000/svg" style="max-width:660px;width:100%">
+      <defs>
+        <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#4ade80"/>
+        </marker>
+        <marker id="arr2" markerWidth="8" markerHeight="8" refX="2" refY="3" orient="auto">
+          <path d="M8,0 L8,6 L0,3 z" fill="#4ade80"/>
+        </marker>
+      </defs>
+
+      <!-- Browser box -->
+      <rect x="20" y="60" width="160" height="60" rx="8" fill="#1e2127" stroke="#2a2d35" stroke-width="1"/>
+      <text x="100" y="86" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="13" fill="#e4e7ed">🌐 Browser</text>
+      <text x="100" y="104" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" fill="#7a8094">JavaScript Client</text>
+
+      <!-- PHP Server box -->
+      <rect x="520" y="60" width="160" height="60" rx="8" fill="#1e2127" stroke="#2a2d35" stroke-width="1"/>
+      <text x="600" y="86" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="13" fill="#e4e7ed">🖥 PHP Server</text>
+      <text x="600" y="104" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" fill="#7a8094">server.php</text>
+
+      <!-- HTTP upgrade arrow -->
+      <line x1="180" y1="80" x2="520" y2="80" stroke="#4ade80" stroke-width="1.5" marker-end="url(#arr)" stroke-dasharray="5,3"/>
+      <text x="350" y="72" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" fill="#4ade80">1. HTTP Upgrade Request</text>
+
+      <!-- WS channel arrow (both ways) -->
+      <line x1="520" y1="100" x2="180" y2="100" stroke="#22d3ee" stroke-width="2" marker-end="url(#arr2)"/>
+      <text x="350" y="118" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" fill="#22d3ee">2. WebSocket — persistent, two-way</text>
+    </svg>
+  </div>
+
+  <div class="note">WebSockets run on top of TCP (the same underlying technology as HTTP). The protocol identifier is <code>ws://</code> (or <code>wss://</code> for encrypted).</div>
+</div>
+
+<hr class="step-rule">
+
+<!-- STEP — HANDSHAKE CONCEPT -->
+<div class="step" id="s2">
+  <div class="step-header">
+    <div class="step-num">★</div>
+    <h2><span>Background Concept</span>The WebSocket Handshake</h2>
+  </div>
+  <div class="explain">
+    Before sending chat messages, the browser and server must perform a special <strong>HTTP upgrade handshake</strong>. Here is what happens, step by step:
+    <ol style="margin-top:10px;">
+      <li>Browser sends an HTTP GET request with a special header: <code>Upgrade: websocket</code>.</li>
+      <li>It also sends a random <strong>key</strong>: <code>Sec-WebSocket-Key: &lt;base64 random&gt;</code>.</li>
+      <li>The server must take that key, append a magic string, SHA-1 hash it, and base64-encode it.</li>
+      <li>Server replies with <code>101 Switching Protocols</code> and returns the computed key.</li>
+      <li>The connection is now a WebSocket — raw frames flow back and forth.</li>
+    </ol>
+    <br>After the handshake, data is sent as <strong>binary frames</strong> (not plain text). We have to encode outgoing frames and decode incoming ones manually.
+  </div>
+
+  <!-- Handshake sequence diagram -->
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 680 240" xmlns="http://www.w3.org/2000/svg" style="max-width:640px;width:100%">
+      <defs>
+        <marker id="ra" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#89dceb"/>
+        </marker>
+        <marker id="la" markerWidth="8" markerHeight="8" refX="1" refY="3" orient="auto">
+          <path d="M8,0 L8,6 L0,3 z" fill="#a6e3a1"/>
+        </marker>
+      </defs>
+      <!-- lifelines -->
+      <line x1="120" y1="20" x2="120" y2="230" stroke="#2a2d35" stroke-width="1" stroke-dasharray="4,3"/>
+      <line x1="560" y1="20" x2="560" y2="230" stroke="#2a2d35" stroke-width="1" stroke-dasharray="4,3"/>
+      <rect x="60" y="8" width="120" height="26" rx="5" fill="#1e2127" stroke="#2a2d35"/>
+      <text x="120" y="25" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="12" fill="#e4e7ed">Browser</text>
+      <rect x="500" y="8" width="120" height="26" rx="5" fill="#1e2127" stroke="#2a2d35"/>
+      <text x="560" y="25" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="12" fill="#e4e7ed">PHP Server</text>
+
+      <!-- Arrow 1: HTTP Upgrade -->
+      <line x1="124" y1="70" x2="556" y2="70" stroke="#89dceb" stroke-width="1.5" marker-end="url(#ra)"/>
+      <text x="340" y="62" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" fill="#89dceb">GET / HTTP/1.1  Upgrade: websocket</text>
+      <text x="340" y="84" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" fill="#585b70">Sec-WebSocket-Key: dGhlIHNhbXBsZQ==</text>
+
+      <!-- Arrow 2: 101 response -->
+      <line x1="556" y1="130" x2="124" y2="130" stroke="#a6e3a1" stroke-width="1.5" marker-end="url(#la)"/>
+      <text x="340" y="122" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" fill="#a6e3a1">HTTP/1.1 101 Switching Protocols</text>
+      <text x="340" y="144" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" fill="#585b70">Sec-WebSocket-Accept: s3pPL...</text>
+
+      <!-- Arrow 3: WS Frame -->
+      <line x1="124" y1="185" x2="556" y2="185" stroke="#f472b6" stroke-width="1.5" marker-end="url(#ra)"/>
+      <text x="340" y="177" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" fill="#f472b6">WebSocket Frame: "Hello!"</text>
+
+      <!-- Arrow 4: WS Frame back -->
+      <line x1="556" y1="215" x2="124" y2="215" stroke="#f472b6" stroke-width="1.5" marker-end="url(#la)"/>
+      <text x="340" y="207" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" fill="#f472b6">WebSocket Frame: "Hi there!"</text>
+    </svg>
+  </div>
+</div>
+
+<hr class="step-rule">
+
+<!-- PROJECT SETUP -->
+<div class="step" id="s3">
+  <div class="step-header">
+    <div class="step-num">0</div>
+    <h2><span>Setup</span>Project Structure & Requirements</h2>
+  </div>
+  <div class="explain">
+    You need <strong>PHP 7.4+</strong> installed with the <code>sockets</code> extension enabled (it is on by default). You also need a terminal to run the server. No web server (Apache/Nginx) is needed — PHP will act as the server itself.
+  </div>
+  <div class="note">Run <code>php -m | grep sockets</code> in your terminal. If you see "sockets" printed, you're good to go.</div>
+
+  <p>Create a folder called <code>php-chat/</code>. Your final file structure will be:</p>
+
+  <div class="filetree">
+    <div><span class="ft-dir">php-chat/</span></div>
+    <div>&nbsp;&nbsp;├── <span class="ft-file">server.php</span><span class="ft-note">← PHP WebSocket server (runs in terminal)</span></div>
+    <div>&nbsp;&nbsp;└── <span class="ft-file">index.html</span><span class="ft-note">← Chat interface (open in browser)</span></div>
+  </div>
+</div>
+
+<hr class="step-rule">
+
+<!-- STEP 1 — SKELETON SERVER -->
+<div class="step" id="s4">
+  <div class="step-header">
+    <div class="step-num">1</div>
+    <h2><span>Step 1</span>Create the PHP Server Skeleton</h2>
+  </div>
+  <div class="explain">
+    First, we create <strong>a TCP socket that listens for connections</strong>. PHP's built-in <code>socket_*</code> functions let us work at the raw network level. Think of a socket as a "telephone jack" — we open it, bind it to an address and port, and wait for callers.
+    <br><br>
+    <strong>Key functions used:</strong>
+    <ul>
+      <li><code>socket_create()</code> — Creates a socket resource (like buying a phone).</li>
+      <li><code>socket_bind()</code> — Ties it to an IP address and port number.</li>
+      <li><code>socket_listen()</code> — Marks the socket as passive, waiting for connections.</li>
+      <li><code>socket_select()</code> — Efficiently monitors multiple sockets at once, waking up only when data arrives.</li>
+    </ul>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">PHP</span>
+      <span class="code-file">server.php</span>
+    </div>
+    <pre><span class="pl">&lt;?php</span>
+<span class="cm">// Tell PHP not to time out — we want this script to run forever</span>
+<span class="fn">set_time_limit</span>(<span class="num">0</span>);
+
+<span class="cm">// HOST and PORT where our WebSocket server will listen</span>
+<span class="kw">define</span>(<span class="str">'HOST'</span>, <span class="str">'127.0.0.1'</span>);
+<span class="kw">define</span>(<span class="str">'PORT'</span>, <span class="num">8080</span>);
+
+<span class="cm">// Create a TCP/IP socket</span>
+<span class="cm">// AF_INET  = IPv4, SOCK_STREAM = TCP (reliable, ordered), SOL_TCP = TCP protocol</span>
+<span class="var">$server</span> = <span class="fn">socket_create</span>(<span class="cls">AF_INET</span>, <span class="cls">SOCK_STREAM</span>, <span class="cls">SOL_TCP</span>);
+
+<span class="cm">// Allow reusing the port immediately after the server restarts</span>
+<span class="fn">socket_set_option</span>(<span class="var">$server</span>, <span class="cls">SOL_SOCKET</span>, <span class="cls">SO_REUSEADDR</span>, <span class="num">1</span>);
+
+<span class="cm">// Bind the socket to our chosen host and port</span>
+<span class="fn">socket_bind</span>(<span class="var">$server</span>, <span class="cls">HOST</span>, <span class="cls">PORT</span>);
+
+<span class="cm">// Start listening — allow up to 20 pending connections in the queue</span>
+<span class="fn">socket_listen</span>(<span class="var">$server</span>, <span class="num">20</span>);
+
+<span class="kw">echo</span> <span class="str">"✅ WebSocket server started on ws://"</span> . <span class="cls">HOST</span> . <span class="str">":"</span> . <span class="cls">PORT</span> . <span class="str">"\n"</span>;
+<span class="kw">echo</span> <span class="str">"   Waiting for connections...\n"</span>;
+
+<span class="cm">// $clients holds ALL open socket connections</span>
+<span class="cm">// We start with just the server socket itself</span>
+<span class="var">$clients</span> = [<span class="var">$server</span>];
+
+<span class="cm">// $handshakeDone tracks which clients have completed the WebSocket handshake</span>
+<span class="var">$handshakeDone</span> = [];
+
+<span class="cm">// Main event loop — runs forever, processing events</span>
+<span class="kw">while</span> (<span class="kw">true</span>) {
+    <span class="cm">// Copy the $clients array — socket_select() modifies it</span>
+    <span class="var">$read</span> = <span class="var">$clients</span>;
+    <span class="var">$write</span> = <span class="kw">null</span>;
+    <span class="var">$except</span> = <span class="kw">null</span>;
+
+    <span class="cm">// socket_select() blocks here until at least one socket has activity</span>
+    <span class="cm">// It puts only the "active" sockets back into $read</span>
+    <span class="kw">if</span> (<span class="fn">socket_select</span>(<span class="var">$read</span>, <span class="var">$write</span>, <span class="var">$except</span>, <span class="num">0</span>, <span class="num">10000</span>) === <span class="kw">false</span>) {
+        <span class="kw">break</span>;
+    }
+
+    <span class="cm">// Loop over every socket that has data waiting</span>
+    <span class="kw">foreach</span> (<span class="var">$read</span> <span class="kw">as</span> <span class="var">$socket</span>) {
+        <span class="kw">if</span> (<span class="var">$socket</span> === <span class="var">$server</span>) {
+            <span class="cm">// A NEW client is trying to connect</span>
+            <span class="var">$client</span> = <span class="fn">socket_accept</span>(<span class="var">$server</span>);
+            <span class="var">$clients</span>[] = <span class="var">$client</span>;
+            <span class="kw">echo</span> <span class="str">"🔗 New connection accepted.\n"</span>;
+        } <span class="kw">else</span> {
+            <span class="cm">// An EXISTING client sent data — we handle it next</span>
+            <span class="fn">handleClient</span>(<span class="var">$socket</span>, <span class="var">$clients</span>, <span class="var">$handshakeDone</span>);
+        }
+    }
+}
+
+<span class="fn">socket_close</span>(<span class="var">$server</span>);</pre>
+  </div>
+
+  <div class="note">The <code>while(true)</code> loop is sometimes called an <strong>event loop</strong>. It is the heart of any server — it just keeps checking for activity and responding to it.</div>
+</div>
+
+<hr class="step-rule">
+
+<!-- STEP 2 — HANDSHAKE -->
+<div class="step" id="s5">
+  <div class="step-header">
+    <div class="step-num">2</div>
+    <h2><span>Step 2</span>Implement the WebSocket Handshake</h2>
+  </div>
+  <div class="explain">
+    When a browser connects, the first thing it sends is an HTTP GET request with special WebSocket headers. We need to:
+    <ol>
+      <li>Read the raw HTTP request from the socket.</li>
+      <li>Extract the <code>Sec-WebSocket-Key</code> value.</li>
+      <li>Compute the acceptance key by hashing it with the WebSocket magic string.</li>
+      <li>Send back a valid HTTP 101 response.</li>
+    </ol>
+    The <strong>magic string</strong> (<code>258EAFA5-E914-47DA-95CA-C5AB0DC85B11</code>) is defined in RFC 6455 — the WebSocket specification. It's a fixed UUID used by all WebSocket implementations in the world.
+  </div>
+
+  <div class="warn">Until the handshake is complete, no WebSocket frames can be sent. If we skip this step, the browser will refuse the connection.</div>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">PHP</span>
+      <span class="code-file">server.php — add below the main loop</span>
+    </div>
+    <pre><span class="cm">/**
+ * Called whenever a client socket has data ready to read.
+ * Decides whether to do the handshake or handle a WS frame.
+ */</span>
+<span class="kw">function</span> <span class="fn">handleClient</span>(<span class="var">$socket</span>, &<span class="var">$clients</span>, &<span class="var">$handshakeDone</span>): <span class="kw">void</span>
+{
+    <span class="cm">// Read up to 4096 bytes from the client</span>
+    <span class="var">$data</span> = <span class="fn">socket_read</span>(<span class="var">$socket</span>, <span class="num">4096</span>);
+
+    <span class="kw">if</span> (<span class="var">$data</span> === <span class="kw">false</span> || <span class="var">$data</span> === <span class="str">''</span>) {
+        <span class="cm">// Client disconnected</span>
+        <span class="fn">removeClient</span>(<span class="var">$socket</span>, <span class="var">$clients</span>, <span class="var">$handshakeDone</span>);
+        <span class="kw">return</span>;
+    }
+
+    <span class="kw">$id</span> = (int)<span class="var">$socket</span>; <span class="cm">// Use socket as a unique ID key</span>
+
+    <span class="kw">if</span> (!<span class="fn">isset</span>(<span class="var">$handshakeDone</span>[<span class="var">$id</span>])) {
+        <span class="cm">// First message from this client must be the HTTP upgrade request</span>
+        <span class="fn">doHandshake</span>(<span class="var">$socket</span>, <span class="var">$data</span>, <span class="var">$handshakeDone</span>);
+    } <span class="kw">else</span> {
+        <span class="cm">// Already handshaked — process as a WebSocket data frame</span>
+        <span class="fn">processFrame</span>(<span class="var">$socket</span>, <span class="var">$data</span>, <span class="var">$clients</span>, <span class="var">$handshakeDone</span>);
+    }
+}
+
+<span class="cm">/**
+ * Performs the RFC 6455 WebSocket opening handshake.
+ */</span>
+<span class="kw">function</span> <span class="fn">doHandshake</span>(<span class="var">$socket</span>, <span class="kw">string</span> <span class="var">$request</span>, &<span class="var">$handshakeDone</span>): <span class="kw">void</span>
+{
+    <span class="cm">// Extract the Sec-WebSocket-Key from the HTTP headers</span>
+    <span class="kw">if</span> (!<span class="fn">preg_match</span>(<span class="str">'/Sec-WebSocket-Key: (.+)\r\n/'</span>, <span class="var">$request</span>, <span class="var">$matches</span>)) {
+        <span class="kw">echo</span> <span class="str">"❌ Not a WebSocket request — closing.\n"</span>;
+        <span class="fn">socket_close</span>(<span class="var">$socket</span>);
+        <span class="kw">return</span>;
+    }
+
+    <span class="var">$key</span> = <span class="fn">trim</span>(<span class="var">$matches</span>[<span class="num">1</span>]);
+
+    <span class="cm">// The magic UUID defined in RFC 6455 — every WebSocket server uses this</span>
+    <span class="var">$magicString</span> = <span class="str">'258EAFA5-E914-47DA-95CA-C5AB0DC85B11'</span>;
+
+    <span class="cm">// Compute the acceptance key:
+    // 1. Concatenate the client key + magic string
+    // 2. SHA-1 hash the result
+    // 3. Base64-encode the hash</span>
+    <span class="var">$acceptKey</span> = <span class="fn">base64_encode</span>(<span class="fn">sha1</span>(<span class="var">$key</span> . <span class="var">$magicString</span>, <span class="kw">true</span>));
+
+    <span class="cm">// Build the HTTP 101 response — must include exactly these headers</span>
+    <span class="var">$response</span>  = <span class="str">"HTTP/1.1 101 Switching Protocols\r\n"</span>;
+    <span class="var">$response</span> .= <span class="str">"Upgrade: websocket\r\n"</span>;
+    <span class="var">$response</span> .= <span class="str">"Connection: Upgrade\r\n"</span>;
+    <span class="var">$response</span> .= <span class="str">"Sec-WebSocket-Accept: {$acceptKey}\r\n"</span>;
+    <span class="var">$response</span> .= <span class="str">"\r\n"</span>; <span class="cm">// Empty line signals end of HTTP headers</span>
+
+    <span class="fn">socket_write</span>(<span class="var">$socket</span>, <span class="var">$response</span>);
+
+    <span class="cm">// Mark this socket as "handshake done"</span>
+    <span class="var">$handshakeDone</span>[(int)<span class="var">$socket</span>] = <span class="kw">true</span>;
+    <span class="kw">echo</span> <span class="str">"🤝 Handshake complete for socket " . (int)</span><span class="var">$socket</span> . <span class="str">".\n"</span>;
+}</pre>
+  </div>
+
+  <div class="note">The <code>sha1($key . $magicString, true)</code> — the second argument <code>true</code> means "return raw binary bytes", not a hex string. Base64-encoding raw bytes gives the correct result.</div>
+</div>
+
+<hr class="step-rule">
+
+<!-- STEP 3 — FRAMES -->
+<div class="step" id="s6">
+  <div class="step-header">
+    <div class="step-num">3</div>
+    <h2><span>Step 3</span>Frame Encoding &amp; Decoding</h2>
+  </div>
+  <div class="explain">
+    After the handshake, data travels as <strong>WebSocket frames</strong> — a compact binary format. Each frame has a small header that describes the data.
+    <br><br>
+    <strong>Decoding (incoming from browser):</strong> The browser always <em>masks</em> its outgoing data using 4 random bytes. We must XOR each byte of the payload with the corresponding masking byte to recover the original message.
+    <br><br>
+    <strong>Encoding (outgoing from server):</strong> The server sends data <em>unmasked</em>. We just need to write a 2-byte (or longer) header describing the payload length.
+  </div>
+
+  <!-- Frame anatomy diagram -->
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 680 120" xmlns="http://www.w3.org/2000/svg" style="max-width:640px;width:100%">
+      <text x="340" y="16" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="11" fill="#7a8094">WebSocket Frame Structure (simplified)</text>
+
+      <rect x="20" y="28" width="70" height="50" rx="4" fill="#1e3320" stroke="#4ade80" stroke-width="1"/>
+      <text x="55" y="51" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" fill="#4ade80">Byte 1</text>
+      <text x="55" y="66" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#585b70">FIN + opcode</text>
+
+      <rect x="100" y="28" width="90" height="50" rx="4" fill="#1e3320" stroke="#4ade80" stroke-width="1"/>
+      <text x="145" y="51" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" fill="#4ade80">Byte 2</text>
+      <text x="145" y="66" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#585b70">MASK + length</text>
+
+      <rect x="200" y="28" width="120" height="50" rx="4" fill="#132030" stroke="#22d3ee" stroke-width="1"/>
+      <text x="260" y="51" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" fill="#22d3ee">Bytes 3–6</text>
+      <text x="260" y="66" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#585b70">Masking key (4 bytes)</text>
+
+      <rect x="330" y="28" width="330" height="50" rx="4" fill="#2a1b2e" stroke="#f472b6" stroke-width="1"/>
+      <text x="495" y="51" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" fill="#f472b6">Remaining bytes</text>
+      <text x="495" y="66" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#585b70">Masked payload data (XOR'd with masking key)</text>
+
+      <text x="340" y="108" text-anchor="middle" font-family="'DM Sans',sans-serif" font-size="11" fill="#585b70">Browser → Server (masked). Server → Browser (unmasked, no masking key)</text>
+    </svg>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">PHP</span>
+      <span class="code-file">server.php — add after doHandshake()</span>
+    </div>
+    <pre><span class="cm">/**
+ * Decodes a raw WebSocket frame sent by the browser.
+ * Returns the decoded text payload, or false on error.
+ */</span>
+<span class="kw">function</span> <span class="fn">decodeFrame</span>(<span class="kw">string</span> <span class="var">$data</span>)
+{
+    <span class="cm">// We need at least 6 bytes (2 header + 4 mask)</span>
+    <span class="kw">if</span> (<span class="fn">strlen</span>(<span class="var">$data</span>) < <span class="num">6</span>) <span class="kw">return false</span>;
+
+    <span class="cm">// Byte 1: FIN bit + opcode
+    // opcode 0x1 = text frame, 0x8 = close frame
+    // ord() converts a character to its numeric ASCII/byte value</span>
+    <span class="var">$opcode</span> = <span class="fn">ord</span>(<span class="var">$data</span>[<span class="num">0</span>]) & <span class="num">0x0F</span>;
+
+    <span class="kw">if</span> (<span class="var">$opcode</span> === <span class="num">0x8</span>) {
+        <span class="kw">return false</span>; <span class="cm">// Close frame — signal disconnect</span>
+    }
+
+    <span class="cm">// Byte 2: MASK flag (bit 7) + payload length (bits 0-6)
+    // & 0x7F clears the top bit to get just the 7-bit length</span>
+    <span class="var">$length</span> = <span class="fn">ord</span>(<span class="var">$data</span>[<span class="num">1</span>]) & <span class="num">0x7F</span>;
+
+    <span class="cm">// For simplicity we handle only payloads up to 125 bytes
+    // (Larger messages need 2 or 8 more length bytes — see RFC 6455 §5.2)</span>
+    <span class="kw">if</span> (<span class="var">$length</span> > <span class="num">125</span>) <span class="kw">return false</span>;
+
+    <span class="cm">// The 4 masking-key bytes start at byte index 2</span>
+    <span class="var">$masks</span> = <span class="fn">substr</span>(<span class="var">$data</span>, <span class="num">2</span>, <span class="num">4</span>);
+
+    <span class="cm">// The actual payload starts at byte index 6</span>
+    <span class="var">$encoded</span> = <span class="fn">substr</span>(<span class="var">$data</span>, <span class="num">6</span>, <span class="var">$length</span>);
+
+    <span class="cm">// XOR each payload byte with the corresponding mask byte (cycling through 4 masks)
+    // This is the unmasking algorithm from RFC 6455</span>
+    <span class="var">$decoded</span> = <span class="str">''</span>;
+    <span class="kw">for</span> (<span class="var">$i</span> = <span class="num">0</span>; <span class="var">$i</span> < <span class="fn">strlen</span>(<span class="var">$encoded</span>); <span class="var">$i</span>++) {
+        <span class="var">$decoded</span> .= <span class="var">$encoded</span>[<span class="var">$i</span>] ^ <span class="var">$masks</span>[<span class="var">$i</span> % <span class="num">4</span>];
+    }
+
+    <span class="kw">return</span> <span class="var">$decoded</span>;
+}
+
+<span class="cm">/**
+ * Encodes a text string into a WebSocket frame for sending.
+ * Server-to-client frames are NOT masked (RFC 6455 §5.1).
+ */</span>
+<span class="kw">function</span> <span class="fn">encodeFrame</span>(<span class="kw">string</span> <span class="var">$text</span>): <span class="kw">string</span>
+{
+    <span class="var">$length</span> = <span class="fn">strlen</span>(<span class="var">$text</span>);
+
+    <span class="cm">// Byte 1: 0x81 = FIN bit set (1) + opcode 0x1 (text frame)
+    // chr() converts a number to the corresponding byte character</span>
+    <span class="var">$frame</span> = <span class="fn">chr</span>(<span class="num">0x81</span>);
+
+    <span class="kw">if</span> (<span class="var">$length</span> <= <span class="num">125</span>) {
+        <span class="cm">// Length fits in 7 bits — write it directly as byte 2</span>
+        <span class="var">$frame</span> .= <span class="fn">chr</span>(<span class="var">$length</span>);
+    } <span class="kw">elseif</span> (<span class="var">$length</span> <= <span class="num">65535</span>) {
+        <span class="cm">// 126 signals "next 2 bytes hold the real length" (big-endian)</span>
+        <span class="var">$frame</span> .= <span class="fn">chr</span>(<span class="num">126</span>) . <span class="fn">pack</span>(<span class="str">'n'</span>, <span class="var">$length</span>);
+    }
+    <span class="cm">// Append the raw text payload (no masking needed from server)</span>
+    <span class="var">$frame</span> .= <span class="var">$text</span>;
+
+    <span class="kw">return</span> <span class="var">$frame</span>;
+}</pre>
+  </div>
+</div>
+
+<hr class="step-rule">
+
+<!-- STEP 4 — BROADCAST -->
+<div class="step" id="s7">
+  <div class="step-header">
+    <div class="step-num">4</div>
+    <h2><span>Step 4</span>Handle Messages &amp; Broadcast to All</h2>
+  </div>
+  <div class="explain">
+    When a client sends a chat message, we need to:
+    <ol>
+      <li><strong>Decode</strong> the incoming WebSocket frame into a plain string.</li>
+      <li><strong>Broadcast</strong> it to every other connected client by encoding a new frame and writing it to each socket.</li>
+      <li>Handle <strong>disconnections</strong> — remove the socket from our list so we don't try writing to a dead connection.</li>
+    </ol>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">PHP</span>
+      <span class="code-file">server.php — add after encodeFrame()</span>
+    </div>
+    <pre><span class="cm">/**
+ * Called when a handshaked client sends a WebSocket frame.
+ */</span>
+<span class="kw">function</span> <span class="fn">processFrame</span>(<span class="var">$socket</span>, <span class="kw">string</span> <span class="var">$data</span>, &<span class="var">$clients</span>, &<span class="var">$handshakeDone</span>): <span class="kw">void</span>
+{
+    <span class="var">$message</span> = <span class="fn">decodeFrame</span>(<span class="var">$data</span>);
+
+    <span class="kw">if</span> (<span class="var">$message</span> === <span class="kw">false</span>) {
+        <span class="cm">// Close frame or bad data — remove client</span>
+        <span class="fn">removeClient</span>(<span class="var">$socket</span>, <span class="var">$clients</span>, <span class="var">$handshakeDone</span>);
+        <span class="kw">return</span>;
+    }
+
+    <span class="cm">// Trim whitespace and ignore empty messages</span>
+    <span class="var">$message</span> = <span class="fn">trim</span>(<span class="var">$message</span>);
+    <span class="kw">if</span> (<span class="var">$message</span> === <span class="str">''</span>) <span class="kw">return</span>;
+
+    <span class="kw">echo</span> <span class="str">"💬 Message received: {$message}\n"</span>;
+
+    <span class="cm">// Broadcast to all OTHER connected (and handshaked) clients</span>
+    <span class="fn">broadcast</span>(<span class="var">$socket</span>, <span class="var">$message</span>, <span class="var">$clients</span>, <span class="var">$handshakeDone</span>);
+}
+
+<span class="cm">/**
+ * Sends a message to every client except the sender.
+ */</span>
+<span class="kw">function</span> <span class="fn">broadcast</span>(<span class="var">$sender</span>, <span class="kw">string</span> <span class="var">$message</span>, <span class="kw">array</span> <span class="var">$clients</span>, <span class="kw">array</span> <span class="var">$handshakeDone</span>): <span class="kw">void</span>
+{
+    <span class="var">$frame</span> = <span class="fn">encodeFrame</span>(<span class="var">$message</span>);
+
+    <span class="kw">foreach</span> (<span class="var">$clients</span> <span class="kw">as</span> <span class="var">$client</span>) {
+        <span class="cm">// Skip the server socket itself and the sender</span>
+        <span class="kw">if</span> (!<span class="fn">isset</span>(<span class="var">$handshakeDone</span>[(int)<span class="var">$client</span>])) <span class="kw">continue</span>;
+        <span class="kw">if</span> (<span class="var">$client</span> === <span class="var">$sender</span>) <span class="kw">continue</span>;
+
+        <span class="fn">socket_write</span>(<span class="var">$client</span>, <span class="var">$frame</span>);
+    }
+}
+
+<span class="cm">/**
+ * Closes and removes a disconnected client from our tracking arrays.
+ */</span>
+<span class="kw">function</span> <span class="fn">removeClient</span>(<span class="var">$socket</span>, &<span class="var">$clients</span>, &<span class="var">$handshakeDone</span>): <span class="kw">void</span>
+{
+    <span class="kw">echo</span> <span class="str">"🔌 Client disconnected: socket " . (int)<span class="var">$socket</span> . "\n"</span>;
+
+    <span class="fn">socket_close</span>(<span class="var">$socket</span>);
+
+    <span class="cm">// Remove from the clients list</span>
+    <span class="var">$key</span> = <span class="fn">array_search</span>(<span class="var">$socket</span>, <span class="var">$clients</span>);
+    <span class="kw">if</span> (<span class="var">$key</span> !== <span class="kw">false</span>) <span class="fn">unset</span>(<span class="var">$clients</span>[<span class="var">$key</span>]);
+
+    <span class="cm">// Remove handshake record</span>
+    <span class="fn">unset</span>(<span class="var">$handshakeDone</span>[(int)<span class="var">$socket</span>]);
+}</pre>
+  </div>
+
+  <div class="note">We skip the sender when broadcasting because the JavaScript client will display the message locally immediately after sending — no need to echo it back.</div>
+</div>
+
+<hr class="step-rule">
+
+<!-- STEP 5 — HTML CLIENT -->
+<div class="step" id="s8">
+  <div class="step-header">
+    <div class="step-num">5</div>
+    <h2><span>Step 5</span>Build the HTML Chat Client</h2>
+  </div>
+  <div class="explain">
+    The browser has a built-in <code>WebSocket</code> API — no libraries needed. Create a connection with <code>new WebSocket('ws://...')</code>, then use these event handlers:
+    <ul>
+      <li><code>ws.onopen</code> — fires when the connection is established.</li>
+      <li><code>ws.onmessage</code> — fires when a message arrives from the server.</li>
+      <li><code>ws.onclose</code> — fires when the connection is closed.</li>
+      <li><code>ws.send(text)</code> — sends a message to the server.</li>
+    </ul>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">HTML + JavaScript</span>
+      <span class="code-file">index.html</span>
+    </div>
+    <pre>&lt;!DOCTYPE html&gt;
+&lt;html lang=<span class="str">"en"</span>&gt;
+&lt;head&gt;
+  &lt;meta charset=<span class="str">"UTF-8"</span>&gt;
+  &lt;title&gt;PHP WebSocket Chat&lt;/title&gt;
+  &lt;style&gt;
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
+    #log  { height: 300px; overflow-y: auto; border: 1px solid #ccc;
+            border-radius: 8px; padding: 12px; background: #f9f9f9; margin-bottom: 12px; }
+    .msg  { margin-bottom: 6px; }
+    .mine { color: #1a6cf0; font-weight: 500; }
+    .theirs { color: #222; }
+    .sys  { color: #888; font-style: italic; font-size: 13px; }
+    #controls { display: flex; gap: 8px; }
+    #nameBox, #msgBox { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; }
+    #nameBox { width: 120px; }
+    #msgBox  { flex: 1; }
+    button   { padding: 8px 16px; background: #1a6cf0; color: #fff;
+               border: none; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #1558c9; }
+    #status { font-size: 13px; color: #888; margin-bottom: 8px; }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;h2&gt;💬 PHP WebSocket Chat&lt;/h2&gt;
+  &lt;div id=<span class="str">"status"</span>&gt;Connecting...&lt;/div&gt;
+  &lt;div id=<span class="str">"log"</span>&gt;&lt;/div&gt;
+
+  &lt;div id=<span class="str">"controls"</span>&gt;
+    &lt;input id=<span class="str">"nameBox"</span> type=<span class="str">"text"</span> placeholder=<span class="str">"Your name"</span> value=<span class="str">"Student"</span>&gt;
+    &lt;input id=<span class="str">"msgBox"</span>  type=<span class="str">"text"</span> placeholder=<span class="str">"Type a message..."</span>&gt;
+    &lt;button onclick=<span class="str">"sendMsg()"</span>&gt;Send&lt;/button&gt;
+  &lt;/div&gt;
+
+  &lt;script&gt;
+    <span class="cm">// 1. Create the WebSocket connection to our PHP server</span>
+    <span class="kw">const</span> ws = <span class="kw">new</span> <span class="cls">WebSocket</span>(<span class="str">'ws://127.0.0.1:8080'</span>);
+
+    <span class="kw">const</span> log    = document.<span class="fn">getElementById</span>(<span class="str">'log'</span>);
+    <span class="kw">const</span> status = document.<span class="fn">getElementById</span>(<span class="str">'status'</span>);
+
+    <span class="cm">// Helper: append a message line to the chat log</span>
+    <span class="kw">function</span> <span class="fn">addLine</span>(text, cssClass) {
+      <span class="kw">const</span> div = document.<span class="fn">createElement</span>(<span class="str">'div'</span>);
+      div.className = <span class="str">'msg '</span> + cssClass;
+      div.textContent = text;
+      log.<span class="fn">appendChild</span>(div);
+      <span class="cm">// Auto-scroll to the newest message</span>
+      log.scrollTop = log.scrollHeight;
+    }
+
+    <span class="cm">// 2. Connection opened — the handshake succeeded</span>
+    ws.onopen = () =&gt; {
+      status.textContent = <span class="str">'✅ Connected'</span>;
+      status.style.color = <span class="str">'#1a8f3c'</span>;
+      <span class="fn">addLine</span>(<span class="str">'Connected to chat server.'</span>, <span class="str">'sys'</span>);
+    };
+
+    <span class="cm">// 3. Message received from the server</span>
+    ws.onmessage = (event) =&gt; {
+      <span class="fn">addLine</span>(event.data, <span class="str">'theirs'</span>);
+    };
+
+    <span class="cm">// 4. Connection closed</span>
+    ws.onclose = () =&gt; {
+      status.textContent = <span class="str">'❌ Disconnected'</span>;
+      status.style.color = <span class="str">'#c0392b'</span>;
+      <span class="fn">addLine</span>(<span class="str">'Disconnected from server.'</span>, <span class="str">'sys'</span>);
+    };
+
+    <span class="cm">// 5. Send a message when the user clicks Send (or presses Enter)</span>
+    <span class="kw">function</span> <span class="fn">sendMsg</span>() {
+      <span class="kw">const</span> name = document.<span class="fn">getElementById</span>(<span class="str">'nameBox'</span>).value.trim() || <span class="str">'Anonymous'</span>;
+      <span class="kw">const</span> text = document.<span class="fn">getElementById</span>(<span class="str">'msgBox'</span>).value.trim();
+      <span class="kw">if</span> (!text) <span class="kw">return</span>;
+
+      <span class="cm">// Prepend the username — the server will broadcast exactly this string</span>
+      <span class="kw">const</span> full = name + <span class="str">': '</span> + text;
+      ws.<span class="fn">send</span>(full);
+
+      <span class="cm">// Show own message locally (the server does NOT echo it back)</span>
+      <span class="fn">addLine</span>(full, <span class="str">'mine'</span>);
+
+      <span class="cm">// Clear the input box</span>
+      document.<span class="fn">getElementById</span>(<span class="str">'msgBox'</span>).value = <span class="str">''</span>;
+    }
+
+    <span class="cm">// Allow pressing Enter to send</span>
+    document.<span class="fn">getElementById</span>(<span class="str">'msgBox'</span>)
+      .<span class="fn">addEventListener</span>(<span class="str">'keydown'</span>, e =&gt; { <span class="kw">if</span> (e.key === <span class="str">'Enter'</span>) <span class="fn">sendMsg</span>(); });
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+  </div>
+</div>
+
+<hr class="step-rule">
+
+<!-- STEP 6 — RUN -->
+<div class="step" id="s9">
+  <div class="step-header">
+    <div class="step-num">6</div>
+    <h2><span>Step 6</span>Run &amp; Test Your Chat App</h2>
+  </div>
+  <div class="explain">
+    Now let's bring it to life. You need a terminal and a browser.
+  </div>
+
+  <p><strong>1. Start the server</strong> — open your terminal, navigate to the project folder, and run:</p>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Bash</span></div>
+    <pre>cd php-chat
+php server.php</pre>
+  </div>
+  <p>You should see: <code>✅ WebSocket server started on ws://127.0.0.1:8080</code></p>
+
+  <p><strong>2. Open two browser tabs</strong> — open <code>index.html</code> directly in your browser (just drag the file onto it, or use <code>File → Open</code>). Open a second tab the same way.</p>
+
+  <p><strong>3. Chat!</strong> — Type a message in one tab and click Send. It should appear in the other tab. Watch your terminal — you'll see the handshake and message logs.</p>
+
+  <div class="warn">Do NOT open <code>index.html</code> via a web server on a different port or origin — browsers may block the WebSocket for security reasons (CORS). Opening as a local file works fine for this exercise.</div>
+
+  <div class="note">To stop the server, press <strong>Ctrl + C</strong> in the terminal.</div>
+</div>
+
+<hr class="step-rule">
+
+<!-- STEP 7 — HOW IT FITS -->
+<div class="step" id="s10">
+  <div class="step-header">
+    <div class="step-num">★</div>
+    <h2><span>Summary</span>How It All Fits Together</h2>
+  </div>
+  <div class="explain">
+    Here is the complete lifecycle of a chat message from start to finish:
+  </div>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 680 310" xmlns="http://www.w3.org/2000/svg" style="max-width:640px;width:100%">
+      <defs>
+        <marker id="fa" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#4ade80"/>
+        </marker>
+      </defs>
+
+      <!-- Steps -->
+      <rect x="20"  y="20" width="640" height="46" rx="7" fill="#1e2127" stroke="#2a2d35"/>
+      <text x="36"  y="40" font-family="'JetBrains Mono',monospace" font-size="11" fill="#4ade80">01</text>
+      <text x="58"  y="40" font-family="'DM Sans',sans-serif" font-size="13" fill="#e4e7ed" font-weight="400">User types a message and presses Send in the browser</text>
+      <text x="58"  y="56" font-family="'JetBrains Mono',monospace" font-size="10" fill="#585b70">JavaScript calls ws.send("Alice: hello")</text>
+
+      <line x1="340" y1="66" x2="340" y2="82" stroke="#2a2d35" stroke-width="1.5" marker-end="url(#fa)"/>
+
+      <rect x="20" y="82" width="640" height="46" rx="7" fill="#1e2127" stroke="#2a2d35"/>
+      <text x="36"  y="102" font-family="'JetBrains Mono',monospace" font-size="11" fill="#22d3ee">02</text>
+      <text x="58"  y="102" font-family="'DM Sans',sans-serif" font-size="13" fill="#e4e7ed">Browser encodes message as a masked WebSocket frame</text>
+      <text x="58"  y="118" font-family="'JetBrains Mono',monospace" font-size="10" fill="#585b70">Binary frame travels over TCP to 127.0.0.1:8080</text>
+
+      <line x1="340" y1="128" x2="340" y2="144" stroke="#2a2d35" stroke-width="1.5" marker-end="url(#fa)"/>
+
+      <rect x="20" y="144" width="640" height="46" rx="7" fill="#1e2127" stroke="#2a2d35"/>
+      <text x="36"  y="164" font-family="'JetBrains Mono',monospace" font-size="11" fill="#f472b6">03</text>
+      <text x="58"  y="164" font-family="'DM Sans',sans-serif" font-size="13" fill="#e4e7ed">PHP server: socket_select() wakes up, reads the frame</text>
+      <text x="58"  y="180" font-family="'JetBrains Mono',monospace" font-size="10" fill="#585b70">decodeFrame() XORs the masked bytes → plain text string</text>
+
+      <line x1="340" y1="190" x2="340" y2="206" stroke="#2a2d35" stroke-width="1.5" marker-end="url(#fa)"/>
+
+      <rect x="20" y="206" width="640" height="46" rx="7" fill="#1e2127" stroke="#2a2d35"/>
+      <text x="36"  y="226" font-family="'JetBrains Mono',monospace" font-size="11" fill="#fab387">04</text>
+      <text x="58"  y="226" font-family="'DM Sans',sans-serif" font-size="13" fill="#e4e7ed">broadcast() loops over all other clients</text>
+      <text x="58"  y="242" font-family="'JetBrains Mono',monospace" font-size="10" fill="#585b70">encodeFrame() wraps text into an unmasked server frame, socket_write() sends it</text>
+
+      <line x1="340" y1="252" x2="340" y2="268" stroke="#2a2d35" stroke-width="1.5" marker-end="url(#fa)"/>
+
+      <rect x="20" y="268" width="640" height="34" rx="7" fill="#1e3320" stroke="#4ade80" stroke-width="1"/>
+      <text x="36"  y="288" font-family="'JetBrains Mono',monospace" font-size="11" fill="#4ade80">05</text>
+      <text x="58"  y="288" font-family="'DM Sans',sans-serif" font-size="13" fill="#e4e7ed">Each other browser receives the frame → ws.onmessage fires → message appears in chat</text>
+    </svg>
+  </div>
+
+  <div class="explain" style="margin-top:20px;">
+    <strong>What you have learned:</strong>
+    <ul style="margin-top:8px;">
+      <li>How to create and manage raw TCP sockets in PHP.</li>
+      <li>How the WebSocket opening handshake works (HTTP → WS upgrade, SHA-1 key derivation).</li>
+      <li>How WebSocket frames are structured — the FIN bit, opcode, masking, and payload encoding.</li>
+      <li>How to build a non-blocking event loop using <code>socket_select()</code>.</li>
+      <li>How to track multiple clients and broadcast messages between them.</li>
+      <li>How to use the browser's native <code>WebSocket</code> JavaScript API.</li>
+    </ul>
+    <br>
+    <strong>Possible improvements to try:</strong>
+    <ul>
+      <li>Support longer messages (extend frame decoding to handle 126/127 length bytes).</li>
+      <li>Add a "User X joined / left" system message to all clients.</li>
+      <li>Add a username registration step before chatting.</li>
+      <li>Use <code>wss://</code> (TLS) for secure connections.</li>
+      <li>Store message history in a file or database.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer" style="padding-top:32px;padding-bottom:48px;">
+  php-websocket-chat tutorial &nbsp;·&nbsp; RFC 6455 WebSocket Protocol &nbsp;·&nbsp; no libraries
+</div>
+
+</div><!-- /content -->
+</body>
+</html>
